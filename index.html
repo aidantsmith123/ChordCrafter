@@ -482,7 +482,7 @@ Important: notes arrays should contain actual note names with octaves (C3, D4, e
         messages: [{ role: "user", content: prompt }]
       })
     });
-    const data = await resp.json();
+    const resp2 = await resp.json(); const data = resp2.data || resp2;
     const raw = data.content.map(b => b.text || '').join('');
     const clean = raw.replace(/```json|```/g, '').trim();
     currentData = JSON.parse(clean);
