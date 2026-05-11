@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>ChordCrafter</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;700;800&family=Space+Mono:wght@400;700&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0a0a0f;
+    --surface: #13131a;
+    --surface2: #1c1c28;
+    --border: rgba(255,255,255,0.08);
+    --border2: rgba(255,255,255,0.15);
+    --accent: #a78bfa;
+    --accent2: #7c3aed;
+    --accent-glow: rgba(167,139,250,0.15);
+    --text: #f0eeff;
+    --muted: #7a7a9a;
+    --green: #34d399;
+    --amber: #fbbf24;
+    --red: #f87171;
+  }
+
+  /* ✅ FIX: ensures the full page background is dark, not just the body */
+  html {
+    background: #0a0a0f;
+  }
+
+  body {
+    font-family: 'Syne', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 2rem 1.5rem 4rem;
+  }
+
+  .app { max-width: 760px; margin: 0 auto; }
+
+  header {
+    display: flex;
+    align-items: baseline;
+    gap: 1rem;
+    margin-bottom: 2.5rem;
+    border-bottom: 0.5px solid var(--border2);
+    padding-bottom: 1.5rem;
+  }
+
+  .logo {
+    font-size: 28px;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    background: linear-gradient(135deg, #a78bfa, #60a5fa);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .logo-sub {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .input-section {
+    background: var(--surface);
+    border: 0.5px solid var(--border);
+    border-radius: 16px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+
+  label {
+    display: block;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+
+  textarea {
+    width: 100%;
+    background: var(--surface2);
+    border: 0.5px solid var(--border2);
+    border-radius: 10px;
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    font-size: 15px;
+    line-height: 1.6;
+    padding: 14px 16px;
+    resize: none;
+    outline: none;
+    transition: border-color 0.2s;
+    height: 100px;
+  }
+
+  textarea::placeholder { color: var(--muted); }
+  textarea:focus { border-color: var(--accent); }
+
+  .controls-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 12px;
+    margin-top: 1rem;
+  }
+
+  select {
+    width: 100%;
+    background: var(--surface2);
+    border: 0.5px solid var(--border2);
+    border-radius: 10px;
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    font-size: 13px;
+    padding: 10px 12px;
+    outline: none;
+    appearance: none;
+    cursor: pointer;
+    transition: border-color 0.2s;
+  }
+
+  select:focus { border-color: var(--accent); }
+
+  .generate-btn {
+    width: 100%;
+    margin-top: 1rem;
+    background: var(--accent2);
+    border: none;
+    border-radius: 10px;
+    color: white;
+    font-family: 'Syne', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    padding: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  .generate-btn:hover:not(:disabled) { background: var(--accent); transform: translateY(-1px); }
+  .generate-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+  .spinner {
+    width: 16px; height: 16px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    display: none;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .results { display: none; }
+  .results.visible { display: block; }
+
+  .section-title {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 12px;
+  }
+
+  .chords-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 10px;
+    margin-bottom: 1.5rem;
+  }
+
+  .chord-card {
+    background: var(--surface);
+    border: 0.5px solid var(--border);
+    border-radius: 12px;
+    padding: 1rem;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .chord-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--accent2), var(--accent));
+  }
+
+  .chord-numeral {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+    margin-bottom: 4px;
+    letter-spacing: 0.05em;
+  }
+
+  .chord-name {
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    margin-bottom: 4px;
+  }
+
+  .chord-quality {
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  .meta-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 1.5rem;
+  }
+
+  .meta-card {
+    background: var(--surface);
+    border: 0.5px solid var(--border);
+    border-radius: 12px;
+    padding: 1rem 1.25rem;
+  }
+
+  .meta-value {
+    font-size: 26px;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    color: var(--accent);
+    font-family: 'Space Mono', monospace;
+  }
+
+  .meta-label {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 2px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  .explanation-card {
+    background: var(--surface);
+    border: 0.5px solid var(--border);
+    border-radius: 12px;
+    padding: 1.25rem;
+    margin-bottom: 1.5rem;
+    line-height: 1.7;
+    font-size: 14px;
+    color: rgba(240,238,255,0.85);
+  }
+
+  .explanation-card h4 {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--accent);
+    margin-bottom: 8px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  .download-btn {
+    width: 100%;
+    background: transparent;
+    border: 0.5px solid var(--accent);
+    border-radius: 10px;
+    color: var(--accent);
+    font-family: 'Syne', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    padding: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    text-transform: uppercase;
+  }
+
+  .download-btn:hover { background: var(--accent-glow); }
+
+  .error-msg {
+    background: rgba(248, 113, 113, 0.1);
+    border: 0.5px solid rgba(248,113,113,0.3);
+    border-radius: 10px;
+    padding: 1rem;
+    color: var(--red);
+    font-size: 14px;
+    margin-top: 1rem;
+    display: none;
+  }
+
+  .piano-roll {
+    display: flex;
+    gap: 4px;
+    align-items: flex-end;
+    height: 48px;
+    margin-top: 8px;
+  }
+
+  .piano-key {
+    flex: 1;
+    border-radius: 4px;
+    background: var(--surface2);
+    transition: all 0.3s;
+  }
+
+  .piano-key.active {
+    background: var(--accent);
+    height: 100%;
+  }
+
+  .piano-key:not(.active) { height: 60%; }
+
+  .tag {
+    display: inline-block;
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    padding: 3px 8px;
+    border-radius: 20px;
+    background: var(--accent-glow);
+    color: var(--accent);
+    border: 0.5px solid rgba(167,139,250,0.3);
+    margin-right: 6px;
+    margin-bottom: 6px;
+    letter-spacing: 0.05em;
+  }
+
+  .bpm-range {
+    font-family: 'Space Mono', monospace;
+    font-size: 13px;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+
+  .section-divider {
+    height: 0.5px;
+    background: var(--border);
+    margin: 1.5rem 0;
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div>
+      <div class="logo">ChordCrafter</div>
+      <div class="logo-sub">AI Chord Progression Studio</div>
+    </div>
+  </header>
+
+  <div class="input-section">
+    <label for="vibe-input">Describe your vibe or artist style</label>
+    <textarea id="vibe-input" placeholder="e.g. Dark melancholic like Billie Eilish, or euphoric progressive house like Eric Prydz, or lo-fi nostalgic rainy afternoon..."></textarea>
+
+    <div class="controls-row">
+      <div>
+        <label>Key</label>
+        <select id="key-select">
+          <option value="">Any key</option>
+          <option>C</option><option>C#/Db</option><option>D</option><option>D#/Eb</option>
+          <option>E</option><option>F</option><option>F#/Gb</option><option>G</option>
+          <option>G#/Ab</option><option>A</option><option>A#/Bb</option><option>B</option>
+        </select>
+      </div>
+      <div>
+        <label>Mode</label>
+        <select id="mode-select">
+          <option value="">Any</option>
+          <option>Major</option><option>Minor</option><option>Dorian</option>
+          <option>Phrygian</option><option>Lydian</option><option>Mixolydian</option>
+        </select>
+      </div>
+      <div>
+        <label>Length</label>
+        <select id="length-select">
+          <option value="4">4 chords</option>
+          <option value="6">6 chords</option>
+          <option value="8">8 chords</option>
+        </select>
+      </div>
+    </div>
+
+    <button class="generate-btn" id="generate-btn" onclick="generateChords()">
+      <div class="spinner" id="spinner"></div>
+      <span id="btn-text">✦ Generate Progression</span>
+    </button>
+    <div class="error-msg" id="error-msg"></div>
+  </div>
+
+  <div class="results" id="results">
+    <div class="section-title">Chord Progression</div>
+    <div class="chords-grid" id="chords-grid"></div>
+
+    <div class="meta-row">
+      <div class="meta-card">
+        <div class="meta-value" id="bpm-value">—</div>
+        <div class="meta-label">Suggested BPM</div>
+        <div class="bpm-range" id="bpm-range"></div>
+      </div>
+      <div class="meta-card">
+        <div class="meta-value" id="key-display">—</div>
+        <div class="meta-label">Key / Mode</div>
+      </div>
+    </div>
+
+    <div class="explanation-card">
+      <h4>Why these chords work</h4>
+      <div id="explanation-text"></div>
+    </div>
+
+    <div class="explanation-card">
+      <h4>BPM rationale</h4>
+      <div id="bpm-text"></div>
+    </div>
+
+    <div class="section-divider"></div>
+
+    <button class="download-btn" onclick="downloadMidi()">
+      ↓ Download MIDI File
+    </button>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/jsmidgen@0.1.5/lib/jsmidgen.js"></script>
+<script>
+let currentData = null;
+
+async function generateChords() {
+  const vibe = document.getElementById('vibe-input').value.trim();
+  if (!vibe) { showError('Please describe a vibe or artist style.'); return; }
+
+  const key = document.getElementById('key-select').value;
+  const mode = document.getElementById('mode-select').value;
+  const length = document.getElementById('length-select').value;
+
+  setLoading(true);
+  hideError();
+
+  const prompt = `You are a music theory expert and chord progression generator for music producers.
+
+Generate a ${length}-chord progression for this vibe/style: "${vibe}"
+${key ? `Preferred key: ${key}` : 'Choose the most fitting key.'}
+${mode ? `Preferred mode: ${mode}` : 'Choose the most fitting mode/scale.'}
+
+Respond ONLY with a valid JSON object, no markdown, no extra text:
+{
+  "key": "C",
+  "mode": "minor",
+  "bpm": 95,
+  "bpmMin": 85,
+  "bpmMax": 110,
+  "chords": [
+    { "name": "Cm", "numeral": "i", "quality": "minor", "notes": ["C3","Eb3","G3"] },
+    { "name": "Ab", "numeral": "VI", "quality": "major", "notes": ["Ab3","C4","Eb4"] }
+  ],
+  "explanation": "2-3 sentences explaining why these chords work together for this vibe, referencing music theory concepts in an accessible way.",
+  "bpmRationale": "1-2 sentences explaining why this BPM range fits the vibe.",
+  "tags": ["dark","cinematic","slow-burn"]
+}
+
+Important: notes arrays should contain actual note names with octaves (C3, D4, etc.) for all chord tones.`;
+
+  try {
+    const resp = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 1000,
+        messages: [{ role: "user", content: prompt }]
+      })
+    });
+    const data = await resp.json();
+    const raw = data.content.map(b => b.text || '').join('');
+    const clean = raw.replace(/```json|```/g, '').trim();
+    currentData = JSON.parse(clean);
+    renderResults(currentData);
+  } catch(e) {
+    showError('Failed to generate. Please try again. (' + e.message + ')');
+  } finally {
+    setLoading(false);
+  }
+}
+
+function renderResults(d) {
+  document.getElementById('results').classList.add('visible');
+
+  const grid = document.getElementById('chords-grid');
+  grid.innerHTML = '';
+  d.chords.forEach(ch => {
+    const card = document.createElement('div');
+    card.className = 'chord-card';
+    card.innerHTML = `
+      <div class="chord-numeral">${ch.numeral}</div>
+      <div class="chord-name">${ch.name}</div>
+      <div class="chord-quality">${ch.quality}</div>
+      <div class="piano-roll">${generatePianoKeys(ch.notes)}</div>
+    `;
+    grid.appendChild(card);
+  });
+
+  document.getElementById('bpm-value').textContent = d.bpm;
+  document.getElementById('bpm-range').textContent = d.bpmMin + '–' + d.bpmMax + ' range';
+  document.getElementById('key-display').textContent = d.key + ' ' + d.mode;
+  document.getElementById('explanation-text').textContent = d.explanation;
+  document.getElementById('bpm-text').textContent = d.bpmRationale;
+
+  document.getElementById('results').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function generatePianoKeys(notes) {
+  const noteNames = ['C','D','E','F','G','A','B'];
+  const activeNames = notes.map(n => n.replace(/[0-9]/g, ''));
+  return noteNames.map(n => `<div class="piano-key ${activeNames.includes(n) ? 'active' : ''}"></div>`).join('');
+}
+
+function setLoading(on) {
+  document.getElementById('spinner').style.display = on ? 'block' : 'none';
+  document.getElementById('btn-text').textContent = on ? 'Crafting progression...' : '✦ Generate Progression';
+  document.getElementById('generate-btn').disabled = on;
+}
+
+function showError(msg) {
+  const el = document.getElementById('error-msg');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
+function hideError() {
+  document.getElementById('error-msg').style.display = 'none';
+}
+
+function noteToMidi(noteName) {
+  const notes = { 'C':0,'C#':1,'Db':1,'D':2,'D#':3,'Eb':3,'E':4,'F':5,'F#':6,'Gb':6,'G':7,'G#':8,'Ab':8,'A':9,'A#':10,'Bb':10,'B':11 };
+  const m = noteName.match(/^([A-G]#?b?)(\d)$/);
+  if (!m) return 60;
+  return (parseInt(m[2]) + 1) * 12 + (notes[m[1]] || 0);
+}
+
+function downloadMidi() {
+  if (!currentData) return;
+  const d = currentData;
+  const ticksPerBeat = 480;
+  const tempo = Math.round(60000000 / d.bpm);
+
+  function writeUint32(v) { return [(v>>24)&0xff,(v>>16)&0xff,(v>>8)&0xff,v&0xff]; }
+  function writeUint16(v) { return [(v>>8)&0xff,v&0xff]; }
+  function varLen(v) {
+    let r=[v&0x7f]; v>>=7;
+    while(v>0){r.unshift((v&0x7f)|0x80);v>>=7;}
+    return r;
+  }
+
+  const header = [0x4d,0x54,0x68,0x64,...writeUint32(6),...writeUint16(0),...writeUint16(1),...writeUint16(ticksPerBeat)];
+
+  const trackEvents = [];
+  trackEvents.push([0x00,0xFF,0x51,0x03,...writeUint32(tempo).slice(1)]);
+
+  const chordDuration = ticksPerBeat * 2;
+
+  d.chords.forEach(chord => {
+    const midiNotes = chord.notes.map(noteToMidi);
+    midiNotes.forEach(n => {
+      trackEvents.push([...varLen(0), 0x90, n, 80]);
+    });
+    midiNotes.forEach((n,i) => {
+      trackEvents.push([...varLen(i===0?chordDuration:0), 0x80, n, 0]);
+    });
+  });
+
+  trackEvents.push([0x00,0xFF,0x2F,0x00]);
+
+  const trackData = trackEvents.flat();
+  const track = [0x4d,0x54,0x72,0x6b,...writeUint32(trackData.length),...trackData];
+
+  const all = new Uint8Array([...header,...track]);
+  const blob = new Blob([all],{type:'audio/midi'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'chordcrafter_' + d.key + d.mode.replace(/\s/g,'') + '.mid';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+document.getElementById('vibe-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) generateChords();
+});
+</script>
+</body>
+</html>
