@@ -473,7 +473,7 @@ Respond ONLY with a valid JSON object, no markdown, no extra text:
 Important: notes arrays should contain actual note names with octaves (C3, D4, etc.) for all chord tones.`;
 
   try {
-    const resp = await fetch("https://api.anthropic.com/v1/messages", {
+    const resp = await fetch("/api/generate", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
